@@ -1,9 +1,11 @@
-endline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_endline_survey_data copy.csv")
-baseline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_baseline_survey_data.csv")
-df_data <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data//df_data.csv")
-detalles_casas <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/detalles_casas.csv")
-encuesta_id_nis_control <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/encuesta_id_nis_control.csv")
-implementation_timeline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/implementation_timeline.csv")
+setwd('G:/marginal_value_ei')
+
+endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
+baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
+df_data <- read.csv("Data//df_data.csv")
+detalles_casas <- read.csv("Data/detalles_casas.csv")
+encuesta_id_nis_control <- read.csv("Data/encuesta_id_nis_control.csv")
+implementation_timeline <- read.csv("Data/implementation_timeline.csv")
 
 
 # Merging Baseline and Endline
@@ -167,7 +169,7 @@ treatment_control_endline$num_appliances <- rowSums(treatment_control_endline[31
         
 # Write CSVs
 #write.csv(treatment_control, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control.csv")
-write.csv(treatment_control_endline, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control_endline.csv")
+write.csv(treatment_control_endline, file = "Data/treatment_control_endline.csv")
         
         
 
