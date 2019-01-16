@@ -1,3 +1,5 @@
+library(lubridate)
+
 endline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_endline_survey_data copy.csv")
 baseline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_baseline_survey_data.csv")
 df_data <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data//df_data.csv")
@@ -21,15 +23,20 @@ detalles_casas_v1 <- detalles_casas[c('encuesta_id','Current_Group','tariff_code
 
 
 # Time Periods
-df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
-df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
+#df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
+#df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
+df_data$date_previous_reading <- dmy(df_data$fecha.factura.)
+df_data$date_current_reading <- dmy(df_data$fecha.factura.ant..)
+
+
 df_data$num_medidor <- df_data$nis
 
 
 # Implementation Time Periods
-implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
-implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
-
+#implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
+#implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
+implementation_timeline$Date.Start_date <- dmy(implementation_timeline$Date.Start)
+implementation_timeline$Date.End_date <- dmy(implementation_timeline$Date.End)
 
 # Merging Meter Data, Treatment Group, Implementation Time Periods
 # Check numbers
@@ -47,10 +54,10 @@ control <- df_data_control_estudio[is.na(df_data_control_estudio$Current_Group),
 control$Current_Group <- "Control"
 
         length(unique(control$num_medidor)) #83
-        length(unique(control$encuesta_id)) #83
+        length(unique(control$encuesta_id)) #1, 83
 
         #Adding Encuesta Id to this Group
-        control_susa <- merge(control,encuesta_id_nis_control,by="num_medidor")
+        control_susa <- merge(control,encuesta_id_nis_control,by="nis")
         names(control_susa)[23] <- "encuesta_id"
         control_var_list <- c("num_medidor", "alumbrado.publico","cargos.varios","comercializacion","csmo_energia",
         "energia_kwh", "fecha.factura.ant..","fecha.factura.", "iva","regulacion.ine","sub_alum_pub_menor_150kwh",
@@ -66,7 +73,8 @@ treatment_control <- rbind(treatment,control)
 
 # Incorporating the Implementation Timeline
 begin = '01/09/17' # Date when the Luzeros were all online and we were sending SMS, and paper energy reports
-begin_date = as.Date(begin, format = "%d/%m/%y")
+#begin_date <- as.Date(begin, format = "%d/%m/%y")
+begin_date <- dmy(begin)
 
 treatment_control$timeline <- ifelse(treatment_control$date_current_reading>begin_date,'Ongoing Experiment','No Experiment')
 
