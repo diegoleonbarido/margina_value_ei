@@ -170,12 +170,22 @@ treatment_control_endline$plancha_pelo.1 <-  as.numeric(as.character(treatment_c
 
         
 treatment_control_endline$num_appliances <- rowSums(treatment_control_endline[31:47],na.rm=TRUE)
-  
 
-        
+treatment_control_endline$date_current_reading <- dmy(treatment_control_endline$fecha.factura.)
+treatment_control_endline$date_previous_reading <- dmy(treatment_control_endline$fecha.factura.ant..)
+treatment_control_endline$days <- treatment_control_endline$date_current_reading - treatment_control_endline$date_previous_reading
+
+
+# Dropping some meter data when the metering was off by many days and only keeping variables that were within the
+# billing cycle. For example, if you do table(treatment_control_endline$days) you'll see that there are many days with
+# a billing cycle of -337 or 337 days. We are only keeping billing cycles that are within 28 to 69 days
+
+keep_days <- c(28,29,30,31,32,33,34,35,36,37,38,39,41,45,46,48,66,67,68,69)
+treatment_control_endline_keep <- treatment_control_endline[treatment_control_endline$days %in% keep_days,]
+
 # Write CSVs
 #write.csv(treatment_control, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control.csv")
-write.csv(treatment_control_endline, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control_endline.csv")
+write.csv(treatment_control_endline_keep, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control_endline.csv")
         
         
 
