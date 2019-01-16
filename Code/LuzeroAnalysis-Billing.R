@@ -32,8 +32,7 @@ aDataBilling <- read_csv(file.path('DATA','treatment_control_endline.csv'))
 aDataUniqueHH <- select(aDataBilling, 'num_medidor', 'Current_Group') %>% unique()
 
 
-## START ANALYSIS
-# FIRST LET'S ANALYSIZE THE IMPACT OF TREATMENT ON ENDLINE VARIABLES ONLY
+## START ANALYSIS ON BILLING DATA
 treatmentGroups <- unique(aDataBilling$Current_Group) %>%
   setdiff('Control')
 luzeroGroup <- c('treatment_luzero_no_SMS', 'treatment_luzero_SMS')
