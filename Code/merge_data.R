@@ -1,14 +1,4 @@
-# set working directory dynamically
-username <- Sys.info()['user']
-if(username == 'Derek'){
-  setwd('G:/marginal_value_ei')
-}
-if(username == 'diego'){
-  setwd('/Users/diego/Desktop/Projects_Code/marginal_value_ei/')
-  
-}
-# load libraries
-library(lubridate)
+setwd('G:/marginal_value_ei')
 
 endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
 baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
@@ -16,6 +6,7 @@ df_data <- read.csv("Data//df_data.csv")
 detalles_casas <- read.csv("Data/detalles_casas.csv")
 encuesta_id_nis_control <- read.csv("Data/encuesta_id_nis_control.csv")
 implementation_timeline <- read.csv("Data/implementation_timeline.csv")
+
 
 # Merging Baseline and Endline
 baseline <- baseline[,-181]
@@ -32,20 +23,15 @@ detalles_casas_v1 <- detalles_casas[c('encuesta_id','Current_Group','tariff_code
 
 
 # Time Periods
-#df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
-#df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
-df_data$date_previous_reading <- dmy(df_data$fecha.factura.)
-df_data$date_current_reading <- dmy(df_data$fecha.factura.ant..)
-
-
+df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
+df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
 df_data$num_medidor <- df_data$nis
 
 
 # Implementation Time Periods
-#implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
-#implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
-implementation_timeline$Date.Start_date <- dmy(implementation_timeline$Date.Start)
-implementation_timeline$Date.End_date <- dmy(implementation_timeline$Date.End)
+implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
+implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
+
 
 # Merging Meter Data, Treatment Group, Implementation Time Periods
 # Check numbers
@@ -63,10 +49,10 @@ control <- df_data_control_estudio[is.na(df_data_control_estudio$Current_Group),
 control$Current_Group <- "Control"
 
         length(unique(control$num_medidor)) #83
-        length(unique(control$encuesta_id)) #1, 83
+        length(unique(control$encuesta_id)) #83
 
         #Adding Encuesta Id to this Group
-        control_susa <- merge(control,encuesta_id_nis_control,by="nis")
+        control_susa <- merge(control,encuesta_id_nis_control,by="num_medidor")
         names(control_susa)[23] <- "encuesta_id"
         control_var_list <- c("num_medidor", "alumbrado.publico","cargos.varios","comercializacion","csmo_energia",
         "energia_kwh", "fecha.factura.ant..","fecha.factura.", "iva","regulacion.ine","sub_alum_pub_menor_150kwh",
@@ -82,8 +68,7 @@ treatment_control <- rbind(treatment,control)
 
 # Incorporating the Implementation Timeline
 begin = '01/09/17' # Date when the Luzeros were all online and we were sending SMS, and paper energy reports
-#begin_date <- as.Date(begin, format = "%d/%m/%y")
-begin_date <- dmy(begin)
+begin_date = as.Date(begin, format = "%d/%m/%y")
 
 treatment_control$timeline <- ifelse(treatment_control$date_current_reading>begin_date,'Ongoing Experiment','No Experiment')
 
@@ -179,23 +164,12 @@ treatment_control_endline$plancha_pelo.1 <-  as.numeric(as.character(treatment_c
 
         
 treatment_control_endline$num_appliances <- rowSums(treatment_control_endline[31:47],na.rm=TRUE)
+  
 
-treatment_control_endline$date_current_reading <- dmy(treatment_control_endline$fecha.factura.)
-treatment_control_endline$date_previous_reading <- dmy(treatment_control_endline$fecha.factura.ant..)
-treatment_control_endline$days <- treatment_control_endline$date_current_reading - treatment_control_endline$date_previous_reading
-
-
-# Dropping some meter data when the metering was off by many days and only keeping variables that were within the
-# billing cycle. For example, if you do table(treatment_control_endline$days) you'll see that there are many days with
-# a billing cycle of -337 or 337 days. We are only keeping billing cycles that are within 28 to 69 days
-
-keep_days <- c(28,29,30,31,32,33,34,35,36,37,38,39,41,45,46,48,66,67,68,69)
-treatment_control_endline_keep <- treatment_control_endline[treatment_control_endline$days %in% keep_days,]
-
+        
 # Write CSVs
-#write.csv(treatment_control, file = "Data/treatment_control.csv")
+#write.csv(treatment_control, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control.csv")
 write.csv(treatment_control_endline, file = "Data/treatment_control_endline.csv")
-
         
         
 
