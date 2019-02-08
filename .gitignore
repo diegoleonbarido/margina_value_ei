@@ -37,9 +37,9 @@ ehthumbs.db
 Thumbs.db
 
 ## other files
-.RData
-.RHistory
+*.RData
+*.RHistory
 
 # data files
-.dta
-.csv
+*.dta
+*.csv
