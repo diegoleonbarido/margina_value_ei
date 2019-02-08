@@ -1,13 +1,22 @@
+# set working directory dynamically
+username <- Sys.info()['user']
+if(username == 'Derek'){
+  setwd('G:/marginal_value_ei')
+}
+if(username == 'diego'){
+  setwd('/Users/diego/Desktop/Projects_Code/marginal_value_ei/')
+  
+}
+# load libraries
 library(lubridate)
 library(tidyr)
 
-endline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_endline_survey_data copy.csv")
-baseline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/Metadata_baseline_survey_data.csv")
-df_data <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data//df_data.csv")
-detalles_casas <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/detalles_casas.csv")
-encuesta_id_nis_control <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/encuesta_id_nis_control.csv")
-implementation_timeline <- read.csv("/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/implementation_timeline.csv")
-
+endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
+baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
+df_data <- read.csv("Data//df_data.csv")
+detalles_casas <- read.csv("Data/detalles_casas.csv")
+encuesta_id_nis_control <- read.csv("Data/encuesta_id_nis_control.csv")
+implementation_timeline <- read.csv("Data/implementation_timeline.csv")
 
 # Merging Baseline and Endline
 baseline <- baseline[,-181]
@@ -273,9 +282,11 @@ treatment_control_endline_keep_prop_ex$oct_prop  <- unlist(treatment_control_end
 treatment_control_endline_keep_prop_ex$nov_prop  <- unlist(treatment_control_endline_keep_prop_ex$nov_prop)
 treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_endline_keep_prop_ex$dec_prop)
 
+
 # Write CSVs
-#write.csv(treatment_control, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control.csv")
-write.csv(treatment_control_endline_keep_prop_ex, file = "/Users/diego/Desktop/Projects_Code/marginal_value_ei/Data/treatment_control_endline.csv")
+
+#write.csv(treatment_control, file = "Data/treatment_control.csv")
+write.csv(treatment_control_endline_keep_prop_ex, file = "Data/treatment_control_endline.csv")
         
         
 
