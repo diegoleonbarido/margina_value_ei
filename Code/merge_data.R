@@ -10,6 +10,7 @@ if(username == 'diego'){
 # load libraries
 library(lubridate)
 library(tidyr)
+library(dplyr)
 
 endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
 baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
@@ -283,19 +284,11 @@ treatment_control_endline_keep_prop_ex$nov_prop  <- unlist(treatment_control_end
 treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_endline_keep_prop_ex$dec_prop)
 
 
+# select what is needed
+treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop_ex %>% 
+  select(-jan_prop1, -feb_prop1, -mar_prop1, -apr_prop1, - may_prop1, -jun_prop1, -jul_prop1)
+
 # Write CSVs
 
 #write.csv(treatment_control, file = "Data/treatment_control.csv")
 write.csv(treatment_control_endline_keep_prop_ex, file = "Data/treatment_control_endline.csv")
-        
-        
-
-
-
-
-
-
-
-
-
-
