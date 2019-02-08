@@ -21,12 +21,27 @@ implementation_timeline <- read.csv("Data/implementation_timeline.csv")
 # Merging Baseline and Endline
 baseline <- baseline[,-181]
 baseline <- baseline[,-180]
+ 
 
 baseline$survey_time <- "baseline"
 endline$survey_time <- "endline"
 
 baseline_endline <- rbind(baseline,endline)
 control_estudio <- baseline_endline[c('control_estudio','encuesta_id','tipo_encuesta')]
+
+# Creating likert scale
+
+baseline_endline$interest_efficiency_likert <- ifelse(baseline_endline$interest_efficiency == "estoy_muy_interesado",4,ifelse(baseline_endline$interest_efficiency == "me_interesa",3,ifelse(baseline_endline$interest_efficiency == "mas_o_menos",2,ifelse(baseline_endline$interest_efficiency == "no_me_interesa",1,NA))))
+baseline_endline$dificultad_pago_likert <- ifelse(baseline_endline$dificultad_pago == "facil",4,ifelse(baseline_endline$dificultad_pago == "relativamente_facil",3,ifelse(baseline_endline$dificultad_pago == "dificil",2,ifelse(baseline_endline$dificultad_pago == "muy_dificil",1,NA))))
+baseline_endline$informacion_util_likert <- ifelse(baseline_endline$informacion_util == "muy_util",4,ifelse(baseline_endline$informacion_util == "util",3,ifelse(baseline_endline$informacion_util == "mas_o_menos",2,ifelse(baseline_endline$informacion_util == "no_me_sirve",1,NA))))
+baseline_endline$focos_eficiencia_ahorro_likert <- ifelse(baseline_endline$focos_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$focos_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$focos_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$ventana_eficiencia_ahorro_likert <- ifelse(baseline_endline$ventana_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$ventana_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$ventana_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$botella_eficiencia_ahorro_likert <- ifelse(baseline_endline$botella_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$botella_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$botella_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$cortina_eficiencia_ahorro_likert <- ifelse(baseline_endline$cortina_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$cortina_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$cortina_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$refri_eficiencia_ahorro_likert <- ifelse(baseline_endline$refri_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$refri_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$refri_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$abanico_eficiencia_ahorro_likert <- ifelse(baseline_endline$abanico_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$abanico_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$abanico_eficiencia_ahorro == "poco",1,NA)))
+baseline_endline$tv_eficiencia_ahorro_likert <- ifelse(baseline_endline$tv_eficiencia_ahorro == "mucho",3,ifelse(baseline_endline$tv_eficiencia_ahorro == "mas o menos",2,ifelse(baseline_endline$tv_eficiencia_ahorro == "poco",1,NA)))
+
 
 # Detalles Casas
 detalles_casas_v1 <- detalles_casas[c('encuesta_id','Current_Group','tariff_code','num_medidor')]
@@ -287,6 +302,10 @@ treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_end
 
 #write.csv(treatment_control, file = "Data/treatment_control.csv")
 write.csv(treatment_control_endline_keep_prop_ex, file = "Data/treatment_control_endline.csv")
+write.csv(baseline_endline, file = "Data/baseline_endline_responses_likert.csv")
+
+
+
         
         
 
