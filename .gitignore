@@ -39,3 +39,7 @@ Thumbs.db
 ## other files
 .RData
 .RHistory
+
+# data files
+.dta
+.csv
