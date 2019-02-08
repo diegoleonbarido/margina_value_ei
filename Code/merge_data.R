@@ -178,8 +178,6 @@ treatment_control_endline$plancha_pelo.1 <-  as.numeric(as.character(treatment_c
         
 treatment_control_endline$num_appliances <- rowSums(treatment_control_endline[31:47],na.rm=TRUE)
   
-
-
 treatment_control_endline$date_current_reading <- dmy(treatment_control_endline$fecha.factura.)
 treatment_control_endline$date_previous_reading <- dmy(treatment_control_endline$fecha.factura.ant..)
 treatment_control_endline$days <- treatment_control_endline$date_current_reading - treatment_control_endline$date_previous_reading
@@ -286,7 +284,16 @@ treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_end
 treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop_ex %>% 
   select(-jan_prop1, -feb_prop1, -mar_prop1, -apr_prop1, - may_prop1, -jun_prop1, -jul_prop1)
 
-# Write CSVs
+# turn NAs in proportion variables to 0
+propIndex <- grep("prop", colnames(treatment_control_endline_keep_prop_ex))
+treatment_control_endline_keep_prop_ex[propIndex] <- 
+  sapply(treatment_control_endline_keep_prop_ex[propIndex], function(x){ 
+    x <- ifelse(is.na(x), 0, x)
+    })
 
+treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop_ex %>%
+  mutate(csmo_energia = gsub(' kWh', '', csmo_energia) %>% as.numeric())
+
+## Write CSVs
 #write.csv(treatment_control, file = "Data/treatment_control.csv")
 write.csv(treatment_control_endline_keep_prop_ex, file = "Data/treatment_control_endline.csv")

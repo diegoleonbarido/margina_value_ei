@@ -5,6 +5,7 @@ library(readr)
 library(dplyr)
 library(devtools)
 library(lubridate)
+library(lfe)
 
 # load functions 
 unique_id <- function(x, ...) {
@@ -35,7 +36,7 @@ aDataUniqueHH <- select(aDataBilling, 'num_medidor', 'Current_Group') %>% unique
 ## START ANALYSIS ON BILLING DATA
 treatmentGroups <- unique(aDataBilling$Current_Group) %>%
   setdiff('Control')
-luzeroGroup <- c('treatment_luzero_no_SMS', 'treatment_luzero_SMS')
+luzeroGroup <- c('treatment_luzero_NO_SMS', 'treatment_luzero_SMS')
 smsGroup <- c('treatment_SMS', 'treatment_luzero_SMS')
 
 aDataBilling <- aDataBilling %>%
@@ -45,10 +46,12 @@ aDataBilling <- aDataBilling %>%
           ifelse(Current_Group %in% luzeroGroup & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
         smsTreatment = 
           ifelse(Current_Group %in% smsGroup & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
+        smsOnly = 
+          ifelse(Current_Group %in% 'treatment_SMS' & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
         luzeroSMSTreatment =
           ifelse(Current_Group %in% 'treatment_luzero_SMS' & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
         luzeroNoSMSTreatment =
-          ifelse(Current_Group %in% 'treatment_luzero_no_SMS' & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
+          ifelse(Current_Group %in% 'treatment_luzero_NO_SMS' & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0),
         paperTreatment = 
           ifelse(Current_Group %in% 'treatment_PAPER' & timeline == 'Ongoing Experiment' & !is.na(timeline), 1, 0))
         
@@ -65,3 +68,25 @@ test %>% unique_id(encuesta_id, timeline, Current_Group) # these are unique valu
 # ok now run some regressions with the billing data: 
 aDataBilling <- aDataBilling %>% unique()
 
+# run a regression on kwh used
+model1 <- felm(csmo_energia ~ 
+                 luzeroTreatment + smsTreatment + paperTreatment +
+                 jan_prop + feb_prop + mar_prop + apr_prop + 
+                 may_prop + jun_prop + jul_prop + aug_prop + 
+                 sep_prop + oct_prop + nov_prop + dec_prop | 
+                 encuesta_id | 0 | 0, data = aDataBilling)
+
+model2 <- felm(csmo_energia ~ 
+                 luzeroTreatment + smsTreatment + paperTreatment +
+                 jan_prop + feb_prop + mar_prop + apr_prop + 
+                 may_prop + jun_prop + jul_prop + aug_prop + 
+                 sep_prop + oct_prop + nov_prop + dec_prop | 
+                 encuesta_id | 0 | encuesta_id, data = aDataBilling)
+
+
+modelAllTreatment <- felm(csmo_energia ~ 
+                            luzeroSMSTreatment + luzeroNoSMSTreatment + smsOnly + paperTreatment +
+                            jan_prop + feb_prop + mar_prop + apr_prop + 
+                            may_prop + jun_prop + jul_prop + aug_prop + 
+                            sep_prop + oct_prop + nov_prop + dec_prop | 
+                            encuesta_id | 0 | encuesta_id, data = aDataBilling)
