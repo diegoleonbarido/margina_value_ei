@@ -1,6 +1,6 @@
 # set working directory dynamically
 username <- Sys.info()['user']
-if(username == 'Derek'){
+if(username == 'Derek' | username == 'derekwolfson'){
   setwd('G:/marginal_value_ei')
 }
 if(username == 'diego'){
