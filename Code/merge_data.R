@@ -1,6 +1,7 @@
+
 # set working directory dynamically
 username <- Sys.info()['user']
-if(username == 'Derek'){
+if(username == 'Derek' | username == 'derekwolfson'){
   setwd('G:/marginal_value_ei')
 }
 if(username == 'diego'){
@@ -10,6 +11,7 @@ if(username == 'diego'){
 # load libraries
 library(lubridate)
 library(tidyr)
+library(dplyr)
 
 endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
 baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
@@ -17,6 +19,7 @@ df_data <- read.csv("Data//df_data.csv")
 detalles_casas <- read.csv("Data/detalles_casas.csv")
 encuesta_id_nis_control <- read.csv("Data/encuesta_id_nis_control.csv")
 implementation_timeline <- read.csv("Data/implementation_timeline.csv")
+
 
 # Merging Baseline and Endline
 baseline <- baseline[,-181]
@@ -48,20 +51,15 @@ detalles_casas_v1 <- detalles_casas[c('encuesta_id','Current_Group','tariff_code
 
 
 # Time Periods
-#df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
-#df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
-df_data$date_previous_reading <- dmy(df_data$fecha.factura.)
-df_data$date_current_reading <- dmy(df_data$fecha.factura.ant..)
-
-
+df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant..), format = "%d/%m/%y")
+df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
 df_data$num_medidor <- df_data$nis
 
 
 # Implementation Time Periods
-#implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
-#implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
-implementation_timeline$Date.Start_date <- dmy(implementation_timeline$Date.Start)
-implementation_timeline$Date.End_date <- dmy(implementation_timeline$Date.End)
+implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
+implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
+
 
 # Merging Meter Data, Treatment Group, Implementation Time Periods
 # Check numbers
@@ -79,10 +77,10 @@ control <- df_data_control_estudio[is.na(df_data_control_estudio$Current_Group),
 control$Current_Group <- "Control"
 
         length(unique(control$num_medidor)) #83
-        length(unique(control$encuesta_id)) #1, 83
+        length(unique(control$encuesta_id)) #83
 
         #Adding Encuesta Id to this Group
-        control_susa <- merge(control,encuesta_id_nis_control,by="nis")
+        control_susa <- merge(control,encuesta_id_nis_control,by="num_medidor")
         names(control_susa)[23] <- "encuesta_id"
         control_var_list <- c("num_medidor", "alumbrado.publico","cargos.varios","comercializacion","csmo_energia",
         "energia_kwh", "fecha.factura.ant..","fecha.factura.", "iva","regulacion.ine","sub_alum_pub_menor_150kwh",
@@ -98,8 +96,7 @@ treatment_control <- rbind(treatment,control)
 
 # Incorporating the Implementation Timeline
 begin = '01/09/17' # Date when the Luzeros were all online and we were sending SMS, and paper energy reports
-#begin_date <- as.Date(begin, format = "%d/%m/%y")
-begin_date <- dmy(begin)
+begin_date = as.Date(begin, format = "%d/%m/%y")
 
 treatment_control$timeline <- ifelse(treatment_control$date_current_reading>begin_date,'Ongoing Experiment','No Experiment')
 
@@ -195,7 +192,7 @@ treatment_control_endline$plancha_pelo.1 <-  as.numeric(as.character(treatment_c
 
         
 treatment_control_endline$num_appliances <- rowSums(treatment_control_endline[31:47],na.rm=TRUE)
-
+  
 treatment_control_endline$date_current_reading <- dmy(treatment_control_endline$fecha.factura.)
 treatment_control_endline$date_previous_reading <- dmy(treatment_control_endline$fecha.factura.ant..)
 treatment_control_endline$days <- treatment_control_endline$date_current_reading - treatment_control_endline$date_previous_reading
@@ -297,24 +294,21 @@ treatment_control_endline_keep_prop_ex$oct_prop  <- unlist(treatment_control_end
 treatment_control_endline_keep_prop_ex$nov_prop  <- unlist(treatment_control_endline_keep_prop_ex$nov_prop)
 treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_endline_keep_prop_ex$dec_prop)
 
+# select what is needed
+treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop_ex %>% 
+  select(-jan_prop1, -feb_prop1, -mar_prop1, -apr_prop1, - may_prop1, -jun_prop1, -jul_prop1)
 
-# Write CSVs
+# turn NAs in proportion variables to 0
+propIndex <- grep("prop", colnames(treatment_control_endline_keep_prop_ex))
+treatment_control_endline_keep_prop_ex[propIndex] <- 
+  sapply(treatment_control_endline_keep_prop_ex[propIndex], function(x){ 
+    x <- ifelse(is.na(x), 0, x)
+    })
 
+treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop_ex %>%
+  mutate(csmo_energia = gsub(' kWh', '', csmo_energia) %>% as.numeric())
+
+## Write CSVs
 #write.csv(treatment_control, file = "Data/treatment_control.csv")
 write.csv(treatment_control_endline_keep_prop_ex, file = "Data/treatment_control_endline.csv")
 write.csv(baseline_endline, file = "Data/baseline_endline_responses_likert.csv")
-
-
-
-        
-        
-
-
-
-
-
-
-
-
-
-
