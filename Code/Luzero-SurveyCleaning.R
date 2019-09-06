@@ -1,29 +1,61 @@
-## LUZERO ANALYSIS -- SURVEY DATA
-## DEREK WOLFSON & DIEGO PONCE DE LEON BARIDO 
-## LAST MODIFIED: JAN-16-2019 
-library(readr)
-library(dplyr)
-library(devtools)
-library(lubridate)
-library(haven)
+###########################################
+# LUZERO DATA BUILD TAKE II 
+# AUTHOR: DEREK WOLFSON 
+# CREATION DATE: 09/05/2019
+###########################################
 
-## SET WORKING DIRECTORY
+
+###########################################
+## SECTION 0 
+##  PREAMBLE 
+###########################################
+## INSTALL 
+require('pacman')
+pacman::p_load('readr', 'dplyr', 'devtools', 'lubridate', 'haven')
+
+## SET WORKING DIRECTORY 
 getwd()
 setwd(file.path('G:','marginal_value_ei'))
 
-# load survey data 
-surveyData <- read_csv('Data/baseline_endline_surveys.csv')
+###########################################
+## END SECTION 0 
+###########################################
+
+###########################################
+## SECTION 1  
+##  CREATE TREATMENT INDICATORS 
+###########################################
+# load survey data
+surveyData <- read_csv('Data/Raw/baseline_endline_surveys.csv')
+
+# extract assignment information from baseline period only
+assignment <- surveyData %>% filter(survey_time == 'baseline') %>%
+  select(encuesta_id, Current_Group, Assigned_Group) %>%
+  mutate(Current_Group = ifelse(Current_Group %in% c('No', 'NO'), 'Control', Current_Group)) %>%
+  mutate(Current_Group = as.factor(Current_Group)) %>%
+  mutate(Assigned_Group = ifelse(Assigned_Group %in% c('No', 'NO'), 'Control', Assigned_Group)) %>%
+  mutate(Assigned_Group = as.factor(Assigned_Group))
 
 
-# create treatment indicators
+# clean and merge the assignment variables 
+surveyData <- surveyData %>% 
+  select(-Current_Group, -Assigned_Group) %>%
+  merge(assignment, by = 'encuesta_id')
+  
+
+# create treatment indicators only for endline time period
 treatmentGroups <- unique(surveyData$Current_Group) %>%
   setdiff('Control')
-luzeroGroup <- c('treatment_luzero_no_SMS', 'treatment_luzero_SMS')
+luzeroGroup <- c('treatment_luzero_NO_SMS', 'treatment_luzero_SMS')
 smsGroup <- c('treatment_SMS', 'treatment_luzero_SMS')
 
+
+# something is missing here...
 surveyData <- surveyData %>%
   mutate(anyTreatment = 
            ifelse(Current_Group %in% treatmentGroups & survey_time == 'endline', 1, 0),
+        luzeroTreatment = 
+           ifelse(Current_Group %in% luzeroGroup & survey_time == 'endline', 1, 0), 
          luzeroTreatment = 
            ifelse(Current_Group %in% luzeroGroup & survey_time == 'endline', 1, 0),
          smsTreatment = 
@@ -36,8 +68,16 @@ surveyData <- surveyData %>%
            ifelse(Current_Group %in% 'treatment_PAPER' & survey_time == 'endline', 1, 0))
 
 
+###########################################
+## END SECTION 1  
+###########################################
+
+###########################################
+## SECTION 2  
+## CREATE BASELINE ONLY FILE
+###########################################
 baselineData <- surveyData %>% filter(survey_time == 'baseline')
-  colnames(baselineData)
+colnames(baselineData)
 idVars <- c('encuesta_id', 'Assigned_Group', 'Current_Group', 'anyTreatment', 'luzeroTreatment', 'smsTreatment', 'luzeroSMSTreatment', 'luzeroNoSMSTreatment', 'paperTreatment')
 balanceVariables <- c(
   'tipo_encuesta',
@@ -138,11 +178,6 @@ balanceVariables <- c(
   'tv_eficiencia_ahorro',
   'tv_eficiencia_cuanto')
 
-baselineData <- baselineData %>% select(idVars, balanceVariables)
-write_dta(baselineData, 'data/baselineData.dta', version = 13)
-
-# mutate baseline data
-colnames(baselineData)
 baselineData <- baselineData %>%
   mutate(
     hhType_HH = ifelse(tipo_encuesta == 'casa', 1, 0),
@@ -185,12 +220,7 @@ baselineData <- baselineData %>%
     energySaveInfo_notUseful = ifelse(informacion_util == 'no_me_sirve', 1, 0),
     energyShareInfo_yes = ifelse(comparte_papel_info == 'si', 1, 0),
     consumo_refrigerador = ifelse(consumo_refrigerador == '4t', 40, consumo_refrigerador))
-    
-    
-    
-    
-    
-    
+
 
 # destring some variables 
 destringVars <- c('consumo_abanico', 'consumo_celular', 'consumo_luces', 
@@ -200,7 +230,7 @@ destringVars <- c('consumo_abanico', 'consumo_celular', 'consumo_luces',
                   'gasto_electrico_cordobas',
                   'gasto_tarifa_electrica',
                   'gasto_agua','gasto_agua_cordobas',
-                   # 'gas_casa',
+                  # 'gas_casa',
                   'gasto_gas',
                   'ingresos_mensuales', 'gastos_mensuales',
                   'porcentaje_electricidad',
@@ -213,29 +243,27 @@ destringVars <- c('consumo_abanico', 'consumo_celular', 'consumo_luces',
                   'tiempo_pago')
 
 sapply(baselineData[destringVars], table)
- 
 destring <- function(x){
   x %>% as.character() %>% as.numeric()
 }
-
 baselineData[destringVars] <- lapply(baselineData[destringVars], destring)
 
 # still need to do the how much variables at the bottom
 varList <- c('focos_eficiencia_ahorro',
-'ventana_eficiencia_ahorro',
-'botella_eficiencia_ahorro',
-'cortina_eficiencia_ahorro',
-'refri_eficiencia_ahorro',
-'abanico_eficiencia_ahorro',
-'tv_eficiencia_ahorro')
+             'ventana_eficiencia_ahorro',
+             'botella_eficiencia_ahorro',
+             'cortina_eficiencia_ahorro',
+             'refri_eficiencia_ahorro',
+             'abanico_eficiencia_ahorro',
+             'tv_eficiencia_ahorro')
 
 varList2 <- c('focos_eficiencia_cuanto',
-             'ventana_eficiencia_cuanto',
-             'botella_eficiencia_cuanto',
-             'cortina_eficiencia_cuanto',
-             'refri_eficiencia_cuanto',
-             'abanico_eficiencia_cuanto',
-             'tv_eficiencia_cuanto')
+              'ventana_eficiencia_cuanto',
+              'botella_eficiencia_cuanto',
+              'cortina_eficiencia_cuanto',
+              'refri_eficiencia_cuanto',
+              'abanico_eficiencia_cuanto',
+              'tv_eficiencia_cuanto')
 
 lapply(baselineData[varList], table)
 types <- unique(baselineData$ventana_eficiencia_ahorro) %>% na.omit() %>% as.character()
@@ -246,7 +274,7 @@ bottomVars1 <- function(x, df, levels){
   
   varname <- paste0(x,'_', 'low')
   mutate(df, !!varname := ifelse(x == 'poco', 1, 0))
-
+  
   varname <- paste0(x,'_', 'med')
   mutate(df, !!varname := ifelse(x == 'mas o menos', 1, 0))
   
@@ -276,6 +304,12 @@ baselineData[varList2] <- lapply(baselineData[varList2], function(x){
 })
 
 colnames(baselineData)
-View(baselineData
-     )
+View(baselineData)
 
+baselineData <- baselineData %>% select(idVars, balanceVariables)
+write_dta(baselineData, 'data/baselineData.dta', version = 13)
+
+
+###########################################
+## END SECTION 2
+###########################################

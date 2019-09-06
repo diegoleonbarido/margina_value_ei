@@ -33,7 +33,6 @@ baseline_endline <- rbind(baseline,endline)
 control_estudio <- baseline_endline[c('control_estudio','encuesta_id','tipo_encuesta')]
 
 # Creating likert scale
-
 baseline_endline$interest_efficiency_likert <- ifelse(baseline_endline$interest_efficiency == "estoy_muy_interesado",4,ifelse(baseline_endline$interest_efficiency == "me_interesa",3,ifelse(baseline_endline$interest_efficiency == "mas_o_menos",2,ifelse(baseline_endline$interest_efficiency == "no_me_interesa",1,NA))))
 baseline_endline$dificultad_pago_likert <- ifelse(baseline_endline$dificultad_pago == "facil",4,ifelse(baseline_endline$dificultad_pago == "relativamente_facil",3,ifelse(baseline_endline$dificultad_pago == "dificil",2,ifelse(baseline_endline$dificultad_pago == "muy_dificil",1,NA))))
 baseline_endline$informacion_util_likert <- ifelse(baseline_endline$informacion_util == "muy_util",4,ifelse(baseline_endline$informacion_util == "util",3,ifelse(baseline_endline$informacion_util == "mas_o_menos",2,ifelse(baseline_endline$informacion_util == "no_me_sirve",1,NA))))
