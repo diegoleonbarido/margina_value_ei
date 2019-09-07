@@ -23,7 +23,6 @@ if(username == 'diego'){
   setwd('/Users/diego/Desktop/Projects_Code/marginal_value_ei/')
 }
 
-
 ## LOAD DATASETS FOR USE LATER
 endline <- read.csv(file.path(dataDir, '01-raw', 'surveyData', 'Metadata_endline_survey_data copy.csv'))
 baseline <- read.csv(file.path(dataDir, '01-raw', 'surveyData', 'Metadata_baseline_survey_data.csv'))
@@ -36,15 +35,28 @@ implementation_timeline <- read.csv(file.path(dataDir, '01-raw', 'adminData', 'i
 ## END SECTION 0 
 ###########################################
 
+
 ###########################################
-## SECTION 1 -
+## SECTION 1 - CLEAN ALL ADMIN DATA 
+###########################################
+# detalles_cases 
+houseDetails <- detalles_casas %>%
+  select(encuesta_id, Current_Group, tariff_code, num_medidor)
+
+# implementation time (OK)
+
+# encuesta_id_nis_control (OK)
+
+
+###########################################
+## EMD SECTION 1
+###########################################
+
+###########################################
+## SECTION 2 -
 ##  CLEAN BASELINE
 ###########################################
-# turn all blank cells into NA 
-empty_as_na <- function(x){
-  if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
-  ifelse(as.character(x)!="", x, NA)
-}
+# turn blank cells into NA
 baseline <- baseline %>% mutate_all(funs(empty_as_na))
 
 
@@ -73,12 +85,6 @@ baseline <- baseline %>% mutate(
 
 # tariff type/electricity stuff
 baseline <- baseline %>% mutate(
-  tarrifType_t0 = ifelse(tariff_code == 't0', 1, 0),
-  tarrifType_t0 = ifelse(is.na(tariff_code), NA, tarrifType_t0), 
-  tarrifType_t1 = ifelse(tariff_code == 't1', 1, 0), 
-  tarrifType_t1 = ifelse(is.na(tariff_code), NA, tarrifType_t1), 
-  tarrifType_tjubil = ifelse(tariff_code == 'tjubilados', 1, 0),
-  tarrifType_tjubil = ifelse(is.na(tariff_code), NA, tarrifType_tjubil), 
   meter = ifelse(medidor == 'si', 1, 0),
   meter = ifelse(is.na(medidor), NA, meter),
   # when do they use energy the most
@@ -127,6 +133,27 @@ baseline <- baseline %>% mutate(
   plancha_pelo = if_else(plancha_pelo == "1 hora a la semana", "1", plancha_pelo),
   plancha_pelo = as.numeric(as.character(plancha_pelo)))
   #
+
+# fill missings with zero
+appliances <- c(
+  'bombillas',
+  'celular',
+  'internet',
+  'radio',
+  'television',
+  'computadora',
+  'refrigerador',
+  'abanico',
+  'aire_acondicionado',
+  'microondas',
+  'licuadora',
+  'lavadora',
+  'secadora',
+  'plancha',
+  'plancha_pelo')
+
+baseline <- baseline %>%
+  mutate_at(appliances, empty_as_zero)
   
 # energy efficiency interest
 baseline <- baseline %>% mutate(
@@ -160,8 +187,7 @@ baseline <- baseline %>% mutate(
 energySaveInfo_very = if_else(informacion_util == 'muy_util', 1, 0),
   energySaveInfo_somewhat = if_else(informacion_util == 'util', 1, 0),
   energySaveInfo_indiff = if_else(informacion_util == 'mas_o_menos', 1, 0),
-  energySaveInfo_notUseful = if_else(informacion_util == 'no_me_sirve', 1, 0),
-  energyShareInfo_yes = if_else(comparte_papel_info == 'si', 1, 0))
+  energySaveInfo_notUseful = if_else(informacion_util == 'no_me_sirve', 1, 0))
 
 # do you share you energy info with anyone else?
 baseline <- baseline %>% mutate( 
@@ -169,6 +195,8 @@ baseline <- baseline %>% mutate(
 
 # clean 'how much willing to pay for efficient appliance...'
 ## change things like "not willing" to zero, respecting missing values
+# how much willing to pay for new efficient appliances...
+
 baseline <- baseline %>%
   mutate_at(vars(matches("eficiencia_cuanto")), destring) %>%
   mutate_at(vars(matches("eficiencia_cuanto")), as.numeric)
@@ -220,16 +248,11 @@ tv_eficiencia_ahorro_likert =
   ifelse(tv_eficiencia_ahorro == "mas o menos",2,
   ifelse(tv_eficiencia_ahorro == "poco",1,NA))))
 
-# how much willing to pay for new efficient appliances...
-destring <- function(x){
-  gsub('.*[a-zA-Z].*', '0', x)
-  }
-
-saveBaseline <- file.path(dataDir, 'clean', )
-write_csv(baseline, dataDir)
+saveBaseline <- file.path(dataDir, '02-clean', 'baselineSurveyClean.csv')
+write_csv(baseline, saveBaseline)
 
 ###########################################
-# END SECTION 1 
+# END SECTION 2 
 ###########################################
 
 ###########################################
