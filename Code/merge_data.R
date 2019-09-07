@@ -1,24 +1,11 @@
 
-# set working directory dynamically
-username <- Sys.info()['user']
-if(username == 'Derek' | username == 'derekwolfson'){
-  setwd('G:/marginal_value_ei')
-}
-if(username == 'diego'){
-  setwd('/Users/diego/Desktop/Projects_Code/marginal_value_ei/')
-  
-}
+
 # load libraries
 library(lubridate)
 library(tidyr)
 library(dplyr)
 
-endline <- read.csv("Data/Metadata_endline_survey_data copy.csv")
-baseline <- read.csv("Data/Metadata_baseline_survey_data.csv")
-df_data <- read.csv("Data//df_data.csv")
-detalles_casas <- read.csv("Data/detalles_casas.csv")
-encuesta_id_nis_control <- read.csv("Data/encuesta_id_nis_control.csv")
-implementation_timeline <- read.csv("Data/implementation_timeline.csv")
+
 
 
 # Merging Baseline and Endline
