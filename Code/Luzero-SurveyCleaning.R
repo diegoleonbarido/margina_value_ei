@@ -4,7 +4,6 @@
 # CREATION DATE: 09/05/2019
 ###########################################
 
-
 ###########################################
 ## SECTION 0 
 ##  PREAMBLE 
@@ -71,9 +70,12 @@ houseDetails <- detalles_casas %>%
 ## SECTION 2 -
 ##  CLEAN BASELINE
 ###########################################
+# add survey round variable
+baseline <- baseline %>% 
+  mutate(surveyRound = "baseline")
+
 # turn blank cells into NA
 baseline <- baseline %>% mutate_all(funs(empty_as_na))
-
 
 # treatment indicators/study indicators
 baseline <- baseline %>%
@@ -81,6 +83,29 @@ baseline <- baseline %>%
   mutate(Current_Group = as.factor(Current_Group)) %>%
   mutate(Assigned_Group = ifelse(Assigned_Group %in% c('No', 'NO'), 'Control', Assigned_Group)) %>%
   mutate(Assigned_Group = as.factor(Assigned_Group))
+
+# add more treatment group variables
+treatmentGroups <- unique(baseline$Current_Group) %>%
+  setdiff('Control') %>%
+  setdiff(NA)
+luzeroGroup <- c('treatment_luzero_NO_SMS', 'treatment_luzero_SMS')
+smsGroup <- c('treatment_SMS', 'treatment_luzero_SMS')
+
+baseline <- baseline %>%
+  mutate(anyTreatment = 
+           if_else(Current_Group %in% treatmentGroups, 1, 0),
+         luzeroTreatment = 
+           if_else(Current_Group %in% luzeroGroup, 1, 0), 
+         luzeroTreatment = 
+           if_else(Current_Group %in% luzeroGroup, 1, 0),
+         smsTreatment = 
+           if_else(Current_Group %in% smsGroup, 1, 0),
+         luzeroSMSTreatment =
+           if_else(Current_Group %in% 'treatment_luzero_SMS', 1, 0),
+         luzeroNoSMSTreatment =
+           if_else(Current_Group %in% 'treatment_luzero_no_SMS', 1, 0),
+         paperTreatment = 
+           if_else(Current_Group %in% 'treatment_PAPER', 1, 0))
 
 # household variables
 baseline <- baseline %>% mutate(
@@ -274,13 +299,42 @@ write_csv(baseline, saveBaseline)
 ## SECTION 3  
 ##  CLEAN ENDLINE DATA 
 ###########################################
+# add survey round variable
+endline <- endline %>% 
+  mutate(surveyRound = "endline")
+
+
 # turn all blank cells into NA 
 endline <- endline %>% mutate_all(funs(empty_as_na))
+
 
 # merge in treatment groups from baseline 
 treatmentGroups <- baseline %>% select(Assigned_Group, Current_Group, encuesta_id)
 endline <- endline %>% select(-Current_Group, -Assigned_Group)
 endline <- merge(endline, treatmentGroups, by = 'encuesta_id')
+
+# add more treatment group variables
+treatmentGroups <- unique(endline$Current_Group) %>%
+  setdiff('Control') %>%
+  setdiff(NA)
+luzeroGroup <- c('treatment_luzero_NO_SMS', 'treatment_luzero_SMS')
+smsGroup <- c('treatment_SMS', 'treatment_luzero_SMS')
+
+endline <- endline %>%
+  mutate(anyTreatment = 
+           if_else(Current_Group %in% treatmentGroups, 1, 0),
+         luzeroTreatment = 
+           if_else(Current_Group %in% luzeroGroup, 1, 0), 
+         luzeroTreatment = 
+           if_else(Current_Group %in% luzeroGroup, 1, 0),
+         smsTreatment = 
+           if_else(Current_Group %in% smsGroup, 1, 0),
+         luzeroSMSTreatment =
+           if_else(Current_Group %in% 'treatment_luzero_SMS', 1, 0),
+         luzeroNoSMSTreatment =
+           if_else(Current_Group %in% 'treatment_luzero_no_SMS', 1, 0),
+         paperTreatment = 
+           if_else(Current_Group %in% 'treatment_PAPER', 1, 0))
 
 
 # household variables
@@ -472,255 +526,36 @@ write_csv(endline, saveEndline)
 ###########################################
 
 ###########################################
-## SECTION 1  
-##  CREATE TREATMENT INDICATORS 
+## SECTION 4  
+##  CREATE SURVEY PANEL DATA
 ###########################################
-# load survey data
-surveyData <- read_csv('Data/Raw/baseline_endline_surveys.csv')
+# append endline data to baseline data, while removing variables that are problematic
+removeVars <- c(
+  'consumo_abanico', 
+  'consumo_refrigerador', 
+  'telefonos', 
+   'X_coordenadasIII_precision')
+endline <- endline %>% select(-removeVars)
+baseline <- baseline %>% select(-removeVars)
+surveyPanel <- bind_rows(baseline, endline)
 
-# extract assignment information from baseline period only
-assignment <- surveyData %>% filter(survey_time == 'baseline') %>%
-  select(encuesta_id, Current_Group, Assigned_Group) %>%
-  mutate(Current_Group = ifelse(Current_Group %in% c('No', 'NO'), 'Control', Current_Group)) %>%
-  mutate(Current_Group = as.factor(Current_Group)) %>%
-  mutate(Assigned_Group = ifelse(Assigned_Group %in% c('No', 'NO'), 'Control', Assigned_Group)) %>%
-  mutate(Assigned_Group = as.factor(Assigned_Group))
-
-
-# clean and merge the assignment variables 
-surveyData <- surveyData %>% 
-  select(-Current_Group, -Assigned_Group) %>%
-  merge(assignment, by = 'encuesta_id')
-  
-
-# create treatment indicators only for endline time period
-treatmentGroups <- unique(surveyData$Current_Group) %>%
-  setdiff('Control')
-luzeroGroup <- c('treatment_luzero_NO_SMS', 'treatment_luzero_SMS')
-smsGroup <- c('treatment_SMS', 'treatment_luzero_SMS')
-
-
-# something is missing here...
-surveyData <- surveyData %>%
+# now change treatment indicator to respect the panel nature of the implementation 
+surveyPanel <- surveyPanel %>%
   mutate(anyTreatment = 
-           ifelse(Current_Group %in% treatmentGroups & survey_time == 'endline', 1, 0),
-        luzeroTreatment = 
-           ifelse(Current_Group %in% luzeroGroup & survey_time == 'endline', 1, 0), 
+           if_else(Current_Group %in% treatmentGroups & surveyRound == 'endline', 1, 0),
          luzeroTreatment = 
-           ifelse(Current_Group %in% luzeroGroup & survey_time == 'endline', 1, 0),
+           if_else(Current_Group %in% luzeroGroup & surveyRound == 'endline', 1, 0), 
+         luzeroTreatment = 
+           if_else(Current_Group %in% luzeroGroup & surveyRound == 'endline', 1, 0),
          smsTreatment = 
-           ifelse(Current_Group %in% smsGroup & survey_time == 'endline', 1, 0),
+           if_else(Current_Group %in% smsGroup & surveyRound == 'endline', 1, 0),
          luzeroSMSTreatment =
-           ifelse(Current_Group %in% 'treatment_luzero_SMS' & survey_time == 'endline', 1, 0),
+           if_else(Current_Group %in% 'treatment_luzero_SMS' & surveyRound == 'endline', 1, 0),
          luzeroNoSMSTreatment =
-           ifelse(Current_Group %in% 'treatment_luzero_no_SMS' & survey_time == 'endline', 1, 0),
+           if_else(Current_Group %in% 'treatment_luzero_no_SMS' & surveyRound == 'endline', 1, 0),
          paperTreatment = 
-           ifelse(Current_Group %in% 'treatment_PAPER' & survey_time == 'endline', 1, 0))
+           if_else(Current_Group %in% 'treatment_PAPER' & surveyRound == 'endline', 1, 0))
 
+savePanel <- file.path(dataDir, '02-clean', 'panelSurveyClean.csv')
+write_csv(surveyPanel, savePanel)
 
-###########################################
-## END SECTION 1  
-###########################################
-
-###########################################
-## SECTION 2 -
-## CREATE BASELINE ONLY FILE
-###########################################
-baselineData <- surveyData %>% filter(survey_time == 'baseline')
-colnames(baselineData)
-idVars <- c('encuesta_id', 'Assigned_Group', 'Current_Group', 'anyTreatment', 'luzeroTreatment', 'smsTreatment', 'luzeroSMSTreatment', 'luzeroNoSMSTreatment', 'paperTreatment')
-balanceVariables <- c(
-  'tipo_encuesta',
-  'tariff_code',
-  'num_personas',
-  'medidor',
-  'sexo',
-  'nivel_educacion',
-  'store_type',
-  'mas_gasta_tiempo',
-  'hora_pico_energia',
-  'dia_pico_energia_choices',
-  'ano_pico_energia_choices',
-  'epoca_consumo',
-  'bombillas',
-  'bombillas_horas',
-  'celular',
-  'celular_horas',
-  'internet',
-  'internet_horas',
-  'radio',
-  'radio_horas',
-  'television',
-  'television_horas',
-  'computadora',
-  'computadora_horas',
-  'refrigerador',
-  'refrigerador_horas',
-  'abanico',
-  'abanico_horas',
-  'aire_acondicionado',
-  'aire_acondicionado_horas',
-  'microondas',
-  'microondas_horas',
-  'licuadora',
-  'licuadora_horas',
-  'equipo',
-  'equipo_horas',
-  'lavadora',
-  'lavadora_horas',
-  'secadora',
-  'secadora_horas',
-  'plancha',
-  'plancha_horas',
-  'plancha_pelo',
-  'plancha_pelo_horas',
-  'consumo_abanico',
-  'consumo_luces',
-  'consumo_television',
-  'consumo_celular',
-  'consumo_radio',
-  'consumo_refrigerador',
-  'interest_efficiency',
-  'estrategias_pasadas_efficiency',
-  'barreras_efficiency',
-  'razon_eficiencia_energeticaI',
-  'razon_eficiencia_energeticaII',
-  'razon_eficiencia_energeticaIII',
-  'gasto_electrico',
-  'gasto_electrico_cordobas',
-  'gasto_tarifa_electrica',
-  'gasto_agua',
-  'gasto_agua_cordobas',
-  'gas_casa',
-  'gasto_gas',
-  'ingresos_mensuales',
-  'gastos_mensuales',
-  'porcentaje_electricidad',
-  'dificultad_pago',
-  'ahorros_si_no',
-  'gasto_servicios',
-  'gasto_cosas_basicas',
-  'gastos_otros_no_diversion',
-  'gastos_diversion',
-  'ahorros_gastos',
-  'control_de_consumo',
-  'como_contro_de_consumo',
-  'cuanto_tiempo_dia_control',
-  'cuantos_dias_control',
-  'informacion_util',
-  'uso_informacion_disnorte',
-  'comparte_papel_info',
-  'type_pago',
-  'tiempo_pago',
-  'type_pago_quality',
-  'focos_eficiencia_ahorro',
-  'focos_eficiencia_cuanto',
-  'ventana_eficiencia_ahorro',
-  'ventana_eficiencia_cuanto',
-  'botella_eficiencia_ahorro',
-  'botella_eficiencia_cuanto',
-  'cortina_eficiencia_ahorro',
-  'cortina_eficiencia_cuanto',
-  'refri_eficiencia_ahorro',
-  'refri_eficiencia_cuanto',
-  'abanico_eficiencia_ahorro',
-  'abanico_eficiencia_cuanto',
-  'tv_eficiencia_ahorro',
-  'tv_eficiencia_cuanto')
-
-baselineData <- baselineData %>%
-  mutate(
-    
-
-
-# destring some variables 
-destringVars <- c('consumo_abanico', 'consumo_celular', 'consumo_luces', 
-                  'consumo_television', 'consumo_radio', 
-                  'consumo_refrigerador',
-                  'gasto_electrico',
-                  'gasto_electrico_cordobas',
-                  'gasto_tarifa_electrica',
-                  'gasto_agua','gasto_agua_cordobas',
-                  # 'gas_casa',
-                  'gasto_gas',
-                  'ingresos_mensuales', 'gastos_mensuales',
-                  'porcentaje_electricidad',
-                  'gasto_servicios',
-                  'gasto_cosas_basicas',
-                  'gastos_otros_no_diversion',
-                  'gastos_diversion',
-                  'cuanto_tiempo_dia_control',
-                  'cuantos_dias_control',
-                  'tiempo_pago')
-
-sapply(baselineData[destringVars], table)
-destring <- function(x){
-  x %>% as.character() %>% as.numeric()
-}
-baselineData[destringVars] <- lapply(baselineData[destringVars], destring)
-
-# still need to do the how much variables at the bottom
-varList <- c('focos_eficiencia_ahorro',
-             'ventana_eficiencia_ahorro',
-             'botella_eficiencia_ahorro',
-             'cortina_eficiencia_ahorro',
-             'refri_eficiencia_ahorro',
-             'abanico_eficiencia_ahorro',
-             'tv_eficiencia_ahorro')
-
-varList2 <- c('focos_eficiencia_cuanto',
-              'ventana_eficiencia_cuanto',
-              'botella_eficiencia_cuanto',
-              'cortina_eficiencia_cuanto',
-              'refri_eficiencia_cuanto',
-              'abanico_eficiencia_cuanto',
-              'tv_eficiencia_cuanto')
-
-lapply(baselineData[varList], table)
-types <- unique(baselineData$ventana_eficiencia_ahorro) %>% na.omit() %>% as.character()
-
-bottomVars1 <- function(x, df, levels){
-  varname <- paste0(x,'_', 'none')
-  mutate(df, !!varname := ifelse(x == 'nada', 1, 0))
-  
-  varname <- paste0(x,'_', 'low')
-  mutate(df, !!varname := ifelse(x == 'poco', 1, 0))
-  
-  varname <- paste0(x,'_', 'med')
-  mutate(df, !!varname := ifelse(x == 'mas o menos', 1, 0))
-  
-  varname <- paste0(x,'_', 'high')
-  mutate(df, !!varname := ifelse(x == 'mucho', 1, 0))
-  
-  varname <- paste0(x,'_', 'nose')
-  mutate(df, !!varname := ifelse(x == 'no se', 1, 0))
-}
-
-# set string answers that indicate zero WTP to zero
-answerZeroList <- 
-  c('no me interesa', 
-    'no pagaria', 
-    'se pueden meter a robar por ahi', 
-    'no pagaria, se pueden meter a robar por ahi',
-    'no se', 
-    'no haria', 
-    'no me interesa', 
-    'no pagaria', 
-    'ni idea', 
-    'no le interesa', 
-    'no lo haria')
-
-baselineData[varList2] <- lapply(baselineData[varList2], function(x){
-  x <- ifelse(x %in% answerZeroList, 0, x) %>% destring()
-})
-
-colnames(baselineData)
-View(baselineData)
-
-baselineData <- baselineData %>% select(idVars, balanceVariables)
-write_dta(baselineData, 'data/baselineData.dta', version = 13)
-
-
-###########################################
-## END SECTION 2
-###########################################
