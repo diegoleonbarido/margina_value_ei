@@ -41,7 +41,6 @@ df_data$date_previous_reading <- as.Date(as.character(df_data$fecha.factura.ant.
 df_data$date_current_reading <- as.Date(as.character(df_data$fecha.factura.), format = "%d/%m/%y")
 df_data$num_medidor <- df_data$nis
 
-
 # Implementation Time Periods
 implementation_timeline$Date.Start_date <- as.Date(as.character(implementation_timeline$Date.Start), format = "%d/%m/%y")
 implementation_timeline$Date.End_date <- as.Date(as.character(implementation_timeline$Date.End), format = "%d/%m/%y")
@@ -134,7 +133,7 @@ endline_vars$gasto_gas <- as.numeric(as.character(endline_vars$gasto_gas))
 endline_vars$ingresos_mensuales <- as.numeric(as.character(endline_vars$ingresos_mensuales))
 endline_vars$gastos_mensuales <- as.numeric(as.character(endline_vars$gastos_mensuales))
 endline_vars$porcentaje_electricidad <- as.numeric(as.character(endline_vars$porcentaje_electricidad))
-    endline_vars$porcentaje_electricidad[endline_vars$porcentaje_electricidad == 20000 ] <- 20
+endline_vars$porcentaje_electricidad[endline_vars$porcentaje_electricidad == 20000 ] <- 20
 endline_vars$ahorros_cantidad <- as.numeric(as.character(endline_vars$ahorros_cantidad))
 endline_vars$gasto_servicios <- as.numeric(as.character(endline_vars$gasto_servicios))
 endline_vars$gasto_cosas_basicas <- as.numeric(as.character(endline_vars$gasto_cosas_basicas))
