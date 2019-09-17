@@ -23,7 +23,7 @@ if(username == 'diego'){
 }
 
 ## LOAD DATASETS FOR USE LATER
-endline <- read.csv(file.path(dataDir, '01-raw', 'surveyData', 'Metadata_endline_survey_data copy.csv'))
+endline <- read.csv(file.path(dataDir, '01-raw', 'surveyData', 'Metadata_endline_survey_data.csv'))
 baseline <- read.csv(file.path(dataDir, '01-raw', 'surveyData', 'Metadata_baseline_survey_data.csv'))
 df_data <- read.csv(file.path(dataDir, '01-raw', 'billingData', 'df_data.csv'))
 detalles_casas <- read.csv(file.path(dataDir, '01-raw', 'adminData', 'detalles_casas.csv'))
@@ -33,8 +33,8 @@ implementation_timeline <- read.csv(file.path(dataDir, '01-raw', 'adminData', 'i
 # SETUP FUNCTIONS FOR REUSE
 # turn all blank cells into NA 
 empty_as_na <- function(x){
-  if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
-  ifelse(as.character(x)!="", x, NA)
+  if("factor" %in% class(x)) x <- as.character(x) ## since if_else wont work with factors
+  if_else(as.character(x)!="", as.character(x), NA_character_)
 }
 
 empty_as_zero <- function(x){
@@ -56,10 +56,16 @@ destring <- function(x){
 # detalles_cases 
 houseDetails <- detalles_casas %>%
   select(encuesta_id, Current_Group, tariff_code, num_medidor)
+meterID <- houseDetails %>%
+  select(encuesta_id, num_medidor)
+treatmentAssignment <- detalles_casas %>%
+  select(encuesta_id, Current_Group)
 
 # implementation time (OK)
 
-# encuesta_id_nis_control (OK)
+# encuesta_id_nis_control
+encuesta_id_nis_control <- encuesta_id_nis_control %>%
+  rename(num_medidor = nis)
 
 
 ###########################################
@@ -74,15 +80,21 @@ houseDetails <- detalles_casas %>%
 baseline <- baseline %>% 
   mutate(surveyRound = "baseline")
 
+# merge in meterID
+baseline <- merge(baseline, meterID, by = 'encuesta_id', all.x = T, all.y = FALSE)
+
 # turn blank cells into NA
 baseline <- baseline %>% mutate_all(funs(empty_as_na))
 
 # treatment indicators/study indicators
 baseline <- baseline %>%
-  mutate(Current_Group = ifelse(Current_Group %in% c('No', 'NO'), 'Control', Current_Group)) %>%
+  mutate(Current_Group = if_else(Current_Group %in% c('No', 'NO'), 'Control', Current_Group)) %>%
   mutate(Current_Group = as.factor(Current_Group)) %>%
-  mutate(Assigned_Group = ifelse(Assigned_Group %in% c('No', 'NO'), 'Control', Assigned_Group)) %>%
+  mutate(Assigned_Group = if_else(Assigned_Group %in% c('No', 'NO'), 'Control', Assigned_Group)) %>%
   mutate(Assigned_Group = as.factor(Assigned_Group))
+
+# merge in other Current_Group from Detalles 
+baseline <- merge(baseline, treatmentAssignment, by = 'encuesta_id', all.x = TRUE, all.y = FALSE)
 
 # add more treatment group variables
 treatmentGroups <- unique(baseline$Current_Group) %>%
@@ -125,8 +137,8 @@ baseline <- baseline %>% mutate(
 
 # tariff type/electricity stuff
 baseline <- baseline %>% mutate(
-  meter = ifelse(medidor == 'si', 1, 0),
-  meter = ifelse(is.na(medidor), NA, meter),
+  meter = if_else(medidor == 'si', 1, 0),
+  meter = if_else(is.na(medidor), NA_real_, meter),
   # when do they use energy the most
   energyMore_morning = if_else(mas_gasta_tiempo == 'manana', 1, 0), 
   energyMore_midday = if_else(mas_gasta_tiempo == 'medio_dia', 1, 0), 
@@ -208,8 +220,11 @@ baseline <- baseline %>% mutate(
   billPaymentDiff_somewhatEasy = if_else(dificultad_pago == 'relativamente_facil', 1, 0),
   billPaymentDiff_hard = if_else(dificultad_pago == 'dificil', 1, 0),
   billPaymentDiff_veryHard = if_else(dificultad_pago == 'muy_dificil', 1, 0))
-  
-  
+
+# percent of income spent on electricity
+baseline <- baseline %>% mutate( 
+  porcentaje_electricidad = if_else(porcentaje_electricidad > 100, NA_real_, as.numeric(porcentaje_electricidad)))
+
 # saving by end of month
 baseline <- baseline %>% mutate(
   saveByMonth_yes = if_else(ahorros_si_no == 'si', 1, 0))
@@ -236,7 +251,6 @@ baseline <- baseline %>% mutate(
 # clean 'how much willing to pay for efficient appliance...'
 ## change things like "not willing" to zero, respecting missing values
 # how much willing to pay for new efficient appliances...
-
 baseline <- baseline %>%
   mutate_at(vars(matches("eficiencia_cuanto")), destring) %>%
   mutate_at(vars(matches("eficiencia_cuanto")), as.numeric)
@@ -245,48 +259,48 @@ baseline <- baseline %>%
 # Creating likert scale for interest variables
 baseline <- baseline %>% mutate(
 interest_efficiency_likert = 
-  ifelse(interest_efficiency == "estoy_muy_interesado",4,
-  ifelse(interest_efficiency == "me_interesa",3,
-  ifelse(interest_efficiency == "mas_o_menos",2,
-  ifelse(interest_efficiency == "no_me_interesa",1,NA)))),
+  if_else(interest_efficiency == "estoy_muy_interesado",4,
+  if_else(interest_efficiency == "me_interesa",3,
+  if_else(interest_efficiency == "mas_o_menos",2,
+  if_else(interest_efficiency == "no_me_interesa",1,NA_real_)))),
 dificultad_pago_likert = 
-  ifelse(dificultad_pago == "facil",4,
-  ifelse(dificultad_pago == "relativamente_facil",3,
-  ifelse(dificultad_pago == "dificil",2,
-  ifelse(dificultad_pago == "muy_dificil",1,NA)))),
+  if_else(dificultad_pago == "facil",4,
+  if_else(dificultad_pago == "relativamente_facil",3,
+  if_else(dificultad_pago == "dificil",2,
+  if_else(dificultad_pago == "muy_dificil",1,NA_real_)))),
 informacion_util_likert = 
-  ifelse(informacion_util == "muy_util",4,
-  ifelse(informacion_util == "util",3,
-  ifelse(informacion_util == "mas_o_menos",2,
-  ifelse(informacion_util == "no_me_sirve",1,NA)))),
+  if_else(informacion_util == "muy_util",4,
+  if_else(informacion_util == "util",3,
+  if_else(informacion_util == "mas_o_menos",2,
+  if_else(informacion_util == "no_me_sirve",1,NA_real_)))),
 focos_eficiencia_ahorro_likert = 
-  ifelse(focos_eficiencia_ahorro == "mucho",3,
-  ifelse(focos_eficiencia_ahorro == "mas o menos",2,
-  ifelse(focos_eficiencia_ahorro == "poco",1,NA))),
+  if_else(focos_eficiencia_ahorro == "mucho",3,
+  if_else(focos_eficiencia_ahorro == "mas o menos",2,
+  if_else(focos_eficiencia_ahorro == "poco",1,NA_real_))),
 ventana_eficiencia_ahorro_likert = 
-  ifelse(ventana_eficiencia_ahorro == "mucho",3,
-  ifelse(ventana_eficiencia_ahorro == "mas o menos",2,
-  ifelse(ventana_eficiencia_ahorro == "poco",1,NA))),
+  if_else(ventana_eficiencia_ahorro == "mucho",3,
+  if_else(ventana_eficiencia_ahorro == "mas o menos",2,
+  if_else(ventana_eficiencia_ahorro == "poco",1,NA_real_))),
 botella_eficiencia_ahorro_likert = 
-  ifelse(botella_eficiencia_ahorro == "mucho",3,
-  ifelse(botella_eficiencia_ahorro == "mas o menos",2,
-  ifelse(botella_eficiencia_ahorro == "poco",1,NA))),
+  if_else(botella_eficiencia_ahorro == "mucho",3,
+  if_else(botella_eficiencia_ahorro == "mas o menos",2,
+  if_else(botella_eficiencia_ahorro == "poco",1,NA_real_))),
 cortina_eficiencia_ahorro_likert = 
-  ifelse(cortina_eficiencia_ahorro == "mucho",3,
-  ifelse(cortina_eficiencia_ahorro == "mas o menos",2,
-  ifelse(cortina_eficiencia_ahorro == "poco",1,NA))),
+  if_else(cortina_eficiencia_ahorro == "mucho",3,
+  if_else(cortina_eficiencia_ahorro == "mas o menos",2,
+  if_else(cortina_eficiencia_ahorro == "poco",1,NA_real_))),
 refri_eficiencia_ahorro_likert = 
-  ifelse(refri_eficiencia_ahorro == "mucho",3,
-  ifelse(refri_eficiencia_ahorro == "mas o menos",2,
-  ifelse(refri_eficiencia_ahorro == "poco",1,NA))),
+  if_else(refri_eficiencia_ahorro == "mucho",3,
+  if_else(refri_eficiencia_ahorro == "mas o menos",2,
+  if_else(refri_eficiencia_ahorro == "poco",1,NA_real_))),
 abanico_eficiencia_ahorro_likert =  
-  ifelse(abanico_eficiencia_ahorro == "mucho",3,
-  ifelse(abanico_eficiencia_ahorro == "mas o menos",2,
-  ifelse(abanico_eficiencia_ahorro == "poco",1,NA))),
+  if_else(abanico_eficiencia_ahorro == "mucho",3,
+  if_else(abanico_eficiencia_ahorro == "mas o menos",2,
+  if_else(abanico_eficiencia_ahorro == "poco",1,NA_real_))),
 tv_eficiencia_ahorro_likert = 
-  ifelse(tv_eficiencia_ahorro == "mucho",3,
-  ifelse(tv_eficiencia_ahorro == "mas o menos",2,
-  ifelse(tv_eficiencia_ahorro == "poco",1,NA))))
+  if_else(tv_eficiencia_ahorro == "mucho",3,
+  if_else(tv_eficiencia_ahorro == "mas o menos",2,
+  if_else(tv_eficiencia_ahorro == "poco",1,NA_real_))))
 
 saveBaseline <- file.path(dataDir, '02-clean', 'baselineSurveyClean.csv')
 write_csv(baseline, saveBaseline)
@@ -303,15 +317,19 @@ write_csv(baseline, saveBaseline)
 endline <- endline %>% 
   mutate(surveyRound = "endline")
 
+# merge in treatment groups from baseline 
+treatmentGroups <- baseline %>% select(Assigned_Group, Current_Group.x, encuesta_id)
+endline <- endline %>% select(-Current_Group, -Assigned_Group)
+endline <- merge(endline, treatmentGroups, by = 'encuesta_id', all.x = TRUE)
+
+# merge in meterID
+endline <- merge(endline, meterID, by = 'encuesta_id', all.x = TRUE, all.y = FALSE)
+
+# merge in other Current_Group from Detalles 
+endline <- merge(endline, treatmentAssignment, by = 'encuesta_id', all.x = TRUE, all.y = FALSE)
 
 # turn all blank cells into NA 
 endline <- endline %>% mutate_all(funs(empty_as_na))
-
-
-# merge in treatment groups from baseline 
-treatmentGroups <- baseline %>% select(Assigned_Group, Current_Group, encuesta_id)
-endline <- endline %>% select(-Current_Group, -Assigned_Group)
-endline <- merge(endline, treatmentGroups, by = 'encuesta_id')
 
 # add more treatment group variables
 treatmentGroups <- unique(endline$Current_Group) %>%
@@ -340,8 +358,8 @@ endline <- endline %>%
 # household variables
 endline <- endline %>% mutate(
   # hh type
-  hhType_HH = if_else(tipo_encuesta == 'casa', 1, 0, missing = NULL),
-  hhType_ME = if_else(tipo_encuesta == 'micro_empresa', 1, 0, missing = NULL),
+  hhType_HH = if_else(tipo_encuesta == 'casa', 1, 0),
+  hhType_ME = if_else(tipo_encuesta == 'micro_empresa', 1, 0),
   # hh size
   num_personas = as.numeric(as.character(num_personas)), 
   # hh head gender
@@ -355,14 +373,11 @@ endline <- endline %>% mutate(
 
 # tariff type/electricity stuff
 endline <- endline %>% mutate(
-  tarrifType_t0 = ifelse(tariff_code == 't0', 1, 0),
-  tarrifType_t0 = ifelse(is.na(tariff_code), NA, tarrifType_t0), 
-  tarrifType_t1 = ifelse(tariff_code == 't1', 1, 0), 
-  tarrifType_t1 = ifelse(is.na(tariff_code), NA, tarrifType_t1), 
-  tarrifType_tjubil = ifelse(tariff_code == 'tjubilados', 1, 0),
-  tarrifType_tjubil = ifelse(is.na(tariff_code), NA, tarrifType_tjubil), 
-  meter = ifelse(medidor == 'si', 1, 0),
-  meter = ifelse(is.na(medidor), NA, meter),
+  tarrifType_t0 = if_else(tariff_code == 't0', 1, 0),
+  tarrifType_t1 = if_else(tariff_code == 't1', 1, 0), 
+  tarrifType_tjubil = if_else(tariff_code == 'tjubilados', 1, 0),
+  meter = if_else(medidor == 'si', 1, 0),
+  meter = if_else(is.na(medidor), NA_real_, meter),
   # when do they use energy the most
   energyMore_morning = if_else(mas_gasta_tiempo == 'manana', 1, 0), 
   energyMore_midday = if_else(mas_gasta_tiempo == 'medio_dia', 1, 0), 
@@ -438,6 +453,9 @@ endline <- endline %>% mutate(
   billPaymentDiff_hard = if_else(dificultad_pago == 'dificil', 1, 0),
   billPaymentDiff_veryHard = if_else(dificultad_pago == 'muy_dificil', 1, 0))
 
+# percent of income spent on electricity
+endline <- endline %>% mutate( 
+  porcentaje_electricidad = if_else(porcentaje_electricidad > 100, NA_real_, as.numeric(porcentaje_electricidad)))
 
 # saving by end of month
 endline <- endline %>% mutate(
@@ -465,7 +483,6 @@ endline <- endline %>% mutate(
 # clean 'how much willing to pay for efficient appliance...'
 ## change things like "not willing" to zero, respecting missing values
 # how much willing to pay for new efficient appliances...
-
 endline <- endline %>%
   mutate_at(vars(matches("eficiencia_cuanto")), destring) %>%
   mutate_at(vars(matches("eficiencia_cuanto")), as.numeric)
@@ -475,48 +492,48 @@ endline <- endline %>%
 # Creating likert scale for interest variables
 baseline <- baseline %>% mutate(
   interest_efficiency_likert = 
-    ifelse(interest_efficiency == "estoy_muy_interesado",4,
-    ifelse(interest_efficiency == "me_interesa",3,
-    ifelse(interest_efficiency == "mas_o_menos",2,
-    ifelse(interest_efficiency == "no_me_interesa",1,NA)))),
+    if_else(interest_efficiency == "estoy_muy_interesado",4,
+    if_else(interest_efficiency == "me_interesa",3,
+    if_else(interest_efficiency == "mas_o_menos",2,
+    if_else(interest_efficiency == "no_me_interesa",1,NA_real_)))),
   dificultad_pago_likert = 
-    ifelse(dificultad_pago == "facil",4,
-    ifelse(dificultad_pago == "relativamente_facil",3,
-    ifelse(dificultad_pago == "dificil",2,
-    ifelse(dificultad_pago == "muy_dificil",1,NA)))),
+    if_else(dificultad_pago == "facil",4,
+    if_else(dificultad_pago == "relativamente_facil",3,
+    if_else(dificultad_pago == "dificil",2,
+    if_else(dificultad_pago == "muy_dificil",1,NA_real_)))),
   informacion_util_likert = 
-    ifelse(informacion_util == "muy_util",4,
-    ifelse(informacion_util == "util",3,
-    ifelse(informacion_util == "mas_o_menos",2,
-    ifelse(informacion_util == "no_me_sirve",1,NA)))),
+    if_else(informacion_util == "muy_util",4,
+    if_else(informacion_util == "util",3,
+    if_else(informacion_util == "mas_o_menos",2,
+    if_else(informacion_util == "no_me_sirve",1,NA_real_)))),
   focos_eficiencia_ahorro_likert = 
-    ifelse(focos_eficiencia_ahorro == "mucho",3,
-    ifelse(focos_eficiencia_ahorro == "mas o menos",2,
-    ifelse(focos_eficiencia_ahorro == "poco",1,NA))),
+    if_else(focos_eficiencia_ahorro == "mucho",3,
+    if_else(focos_eficiencia_ahorro == "mas o menos",2,
+    if_else(focos_eficiencia_ahorro == "poco",1,NA_real_))),
   ventana_eficiencia_ahorro_likert = 
-    ifelse(ventana_eficiencia_ahorro == "mucho",3,
-    ifelse(ventana_eficiencia_ahorro == "mas o menos",2,
-    ifelse(ventana_eficiencia_ahorro == "poco",1,NA))),
+    if_else(ventana_eficiencia_ahorro == "mucho",3,
+    if_else(ventana_eficiencia_ahorro == "mas o menos",2,
+    if_else(ventana_eficiencia_ahorro == "poco",1,NA_real_))),
   botella_eficiencia_ahorro_likert = 
-    ifelse(botella_eficiencia_ahorro == "mucho",3,
-    ifelse(botella_eficiencia_ahorro == "mas o menos",2,
-    ifelse(botella_eficiencia_ahorro == "poco",1,NA))),
+    if_else(botella_eficiencia_ahorro == "mucho",3,
+    if_else(botella_eficiencia_ahorro == "mas o menos",2,
+    if_else(botella_eficiencia_ahorro == "poco",1,NA_real_))),
   cortina_eficiencia_ahorro_likert = 
-    ifelse(cortina_eficiencia_ahorro == "mucho",3,
-    ifelse(cortina_eficiencia_ahorro == "mas o menos",2,
-    ifelse(cortina_eficiencia_ahorro == "poco",1,NA))),
+    if_else(cortina_eficiencia_ahorro == "mucho",3,
+    if_else(cortina_eficiencia_ahorro == "mas o menos",2,
+    if_else(cortina_eficiencia_ahorro == "poco",1,NA_real_))),
   refri_eficiencia_ahorro_likert = 
-    ifelse(refri_eficiencia_ahorro == "mucho",3,
-    ifelse(refri_eficiencia_ahorro == "mas o menos",2,
-    ifelse(refri_eficiencia_ahorro == "poco",1,NA))),
+    if_else(refri_eficiencia_ahorro == "mucho",3,
+    if_else(refri_eficiencia_ahorro == "mas o menos",2,
+    if_else(refri_eficiencia_ahorro == "poco",1,NA_real_))),
   abanico_eficiencia_ahorro_likert =  
-    ifelse(abanico_eficiencia_ahorro == "mucho",3,
-    ifelse(abanico_eficiencia_ahorro == "mas o menos",2,
-    ifelse(abanico_eficiencia_ahorro == "poco",1,NA))),
+    if_else(abanico_eficiencia_ahorro == "mucho",3,
+    if_else(abanico_eficiencia_ahorro == "mas o menos",2,
+    if_else(abanico_eficiencia_ahorro == "poco",1,NA_real_))),
   tv_eficiencia_ahorro_likert = 
-    ifelse(tv_eficiencia_ahorro == "mucho",3,
-    ifelse(tv_eficiencia_ahorro == "mas o menos",2,
-    ifelse(tv_eficiencia_ahorro == "poco",1,NA))))
+    if_else(tv_eficiencia_ahorro == "mucho",3,
+    if_else(tv_eficiencia_ahorro == "mas o menos",2,
+    if_else(tv_eficiencia_ahorro == "poco",1,NA_real_))))
 
 saveEndline <- file.path(dataDir, '02-clean', 'endlineSurveyClean.csv')
 write_csv(endline, saveEndline)
@@ -558,4 +575,52 @@ surveyPanel <- surveyPanel %>%
 
 savePanel <- file.path(dataDir, '02-clean', 'panelSurveyClean.csv')
 write_csv(surveyPanel, savePanel)
+###########################################
+# END SECTION 4
+###########################################
 
+###########################################
+## SECTION 5 
+##  CLEAN BILLING DATA
+###########################################
+# add time periods to the DF data 
+df_data <- df_data %>% 
+  mutate(date_previous_reading = dmy(df_data$fecha.factura.ant..),
+         date_current_reading = dmy(fecha.factura.)) %>%
+  select(-fecha.factura.ant.., -fecha.factura.) %>%
+  mutate(days = as.numeric(date_current_reading - date_previous_reading))
+
+# Dropping some meter data when the metering was off by many days and only keeping variables that were within the
+# billing cycle. For example, if you do table(treatment_control_endline$days) you'll see that there are many days with
+# a billing cycle of -337 or 337 days. We are only keeping billing cycles that are within 28 to 69 days
+df_data <- df_data %>% 
+  filter(between(days, 28, 69))
+  
+# rename medidor 
+df_data <- df_data %>%
+  rename(num_medidor = nis)
+
+# merge in household IDs for control households
+df_data <- merge(df_data, encuesta_id_nis_control, by = 'num_medidor', all = T)
+
+# merge in treatment data
+df_data <- 
+  merge(df_data, houseDetails, by='num_medidor',all=T)
+
+# fill in treatment as control if current group is missing
+df_data <- df_data %>%
+  mutate(Current_Group = if_else(is.na(Current_Group), 'Control', as.character(Current_Group)))
+
+# add in timelin variable to determine if treatment is happening yet 
+begin = '01/09/17' # Date when the Luzeros were all online and we were sending SMS, and paper energy reports
+begin_date = as.Date(begin, format = "%d/%m/%y")
+df_data <- df_data %>% mutate(
+  treatmentPeriod = if_else(date_current_reading >= begin_date, 1, 0))
+
+# now start preparing to create proportions of data in each month 
+df_data <- df_data %>%
+  mutate(prop1 = (days - day(date_previous_reading))/days,
+         prop2 = day(date_current_reading)/days)
+###########################################
+# END SECTION 5
+###########################################
