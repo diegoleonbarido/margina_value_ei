@@ -189,9 +189,6 @@ baselineData <- baselineData %>%
     
     
     
-    
-    
-
 # destring some variables 
 destringVars <- c('consumo_abanico', 'consumo_celular', 'consumo_luces', 
                   'consumo_television', 'consumo_radio', 

@@ -559,3 +559,26 @@ surveyPanel <- surveyPanel %>%
 savePanel <- file.path(dataDir, '02-clean', 'panelSurveyClean.csv')
 write_csv(surveyPanel, savePanel)
 
+###########################################
+# END SECTION 4
+###########################################
+
+###########################################
+## SECTION 4  
+##  CLEAN ELECTRICITY USE DATA
+###########################################
+df_data <- df_data %>% 
+
+
+
+
+# Dropping some meter data when the metering was off by many days and only keeping variables that were within the
+# billing cycle. For example, if you do table(treatment_control_endline$days) you'll see that there are many days with
+# a billing cycle of -337 or 337 days. We are only keeping billing cycles that are within 28 to 69 days
+
+
+
+
+keep_days <- keep_days <- c(28,29,30,31,32,33,34,35,36,37,38,39,41,45,46,48,66,67,68,69)
+
+
