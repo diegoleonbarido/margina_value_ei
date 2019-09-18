@@ -583,6 +583,9 @@ write_csv(surveyPanel, savePanel)
 ## SECTION 5
 ##  CLEAN BILLING DATA
 ###########################################
+df_data <- read.csv(file.path(dataDir, '01-raw', 'billingData', 'df_data.csv')) %>% 
+  distinct() # tons of duplicates observations...
+
 # add time periods to the DF data
 df_data <- df_data %>%
   mutate(date_previous_reading = dmy(df_data$fecha.factura.ant..),
@@ -611,7 +614,44 @@ df_data <-
 df_data <- df_data %>%
   mutate(Current_Group = if_else(is.na(Current_Group), 'Control', as.character(Current_Group)))
 
-# add in timelin variable to determine if treatment is happening yet
+# create proper household ID 
+df_data <- df_data %>%
+  mutate(encuesta_id = ifelse(!is.na(encuesta_id.x), encuesta_id.x, encuesta_id.y)) 
+
+# create list variable containing the domain of months for each observation 
+df_data <- df_data %>%  
+  drop_na(date_current_reading, date_previous_reading)
+
+test <- sapply(1:nrow(df_data), function(x){
+jj <- c(seq(df_data$date_previous_reading[x], df_data$date_current_reading[x], by = 'month'), df_data$date_current_reading[x]) %>% unique() 
+jj <- ifelse(length(jj) == 4, 
+             list(c(jj[1], 
+                    jj[2] - day(jj[2]), 
+                    jj[2] - day(jj[2]) + 1, 
+                    jj[4] - day(jj[4]),
+                    jj[4] - day(jj[4]) + 1,
+                    jj[4])), 
+      ifelse(length(jj) == 3, 
+             list(c(jj[1], 
+                    jj[2] - day(jj[2]), 
+                    jj[2] - day(jj[2]) + 1, 
+                    jj[3] - day(jj[3]),
+                    jj[3] - day(jj[3]) + 1,
+                    jj[3])),
+     ifelse(length(jj) == 2, 
+            list(c(jj[1], 
+                   jj[2] - day(jj[2]), 
+                   jj[2] - day(jj[2]) + 1, 
+                   jj[2])),list(jj))))
+
+jj <- jj %>% unlist() %>% unique() %>% as_date()
+}) 
+
+df_data <- df_data %>%
+  mutate(dates = test) %>%
+  arrange(desc(days))
+
+# add in timeline variable to determine if treatment is happening yet
 begin = '01/09/17' # Date when the Luzeros were all online and we were sending SMS, and paper energy reports
 begin_date = as.Date(begin, format = "%d/%m/%y")
 df_data <- df_data %>% mutate(
@@ -619,8 +659,111 @@ df_data <- df_data %>% mutate(
 
 # now start preparing to create proportions of data in each month
 df_data <- df_data %>%
-  mutate(prop1 = (days - day(date_previous_reading))/days,
-         prop2 = day(date_current_reading)/days)
+  mutate(propPrevious = (days - day(date_previous_reading))/days,
+         propCurrent = day(date_current_reading)/days)
+
+# generate month variable
+df_data <- df_data %>%
+  mutate(monthPrevious = month(date_previous_reading), yearPrevious = year(date_previous_reading)) %>%
+  mutate(monthCurrent = month(date_current_reading), yearCurrent = year(date_current_reading))
+  
+
+# now extract data and call month/prop either previous or current
+kwhDataPrevious <- df_data %>%
+  select(num_medidor, encuesta_id, csmo_energia, propPrevious, monthPrevious, yearPrevious) %>%
+  mutate(prop = propPrevious, month = monthPrevious, year = yearPrevious) %>%
+  arrange(encuesta_id, year, month)
+
+kwhDataCurrent <- df_data %>%
+  select(num_medidor, encuesta_id, csmo_energia, propCurrent, monthCurrent, yearCurrent) %>%
+  mutate(prop = propCurrent, month = monthCurrent, year = yearCurrent) %>%
+  arrange(encuesta_id, year, month)
+
+kwhData <- bind_rows(kwhDataPrevious, kwhDataCurrent) %>%
+  arrange(encuesta_id, year, month)
+
+# LONG CODE FOR MAKING PROPORTION VARIABLES 
+treatment_control_endline_keep_prop$jan_prop <- NA
+treatment_control_endline_keep_prop$feb_prop <- NA
+treatment_control_endline_keep_prop$mar_prop <- NA
+treatment_control_endline_keep_prop$apr_prop <- NA
+treatment_control_endline_keep_prop$may_prop <- NA
+treatment_control_endline_keep_prop$jun_prop <- NA
+treatment_control_endline_keep_prop$jul_prop <- NA
+treatment_control_endline_keep_prop$aug_prop <- NA
+treatment_control_endline_keep_prop$sep_prop <- NA
+treatment_control_endline_keep_prop$oct_prop <- NA
+treatment_control_endline_keep_prop$nov_prop <- NA
+treatment_control_endline_keep_prop$dec_prop <- NA
+
+treatment_control_endline_keep_prop$jan_prop1 <- NA
+treatment_control_endline_keep_prop$feb_prop1 <- NA
+treatment_control_endline_keep_prop$mar_prop1 <- NA
+treatment_control_endline_keep_prop$apr_prop1 <- NA
+treatment_control_endline_keep_prop$may_prop1 <- NA
+treatment_control_endline_keep_prop$jun_prop1 <- NA
+treatment_control_endline_keep_prop$jul_prop1 <- NA
+treatment_control_endline_keep_prop$aug_prop1 <- NA
+treatment_control_endline_keep_prop$sep_prop1 <- NA
+treatment_control_endline_keep_prop$oct_prop1 <- NA
+treatment_control_endline_keep_prop$nov_prop1 <- NA
+treatment_control_endline_keep_prop$dec_prop1 <- NA
+
+#Making Column Months
+treatment_control_endline_keep_prop$jan_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 1,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$feb_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 2,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$mar_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 3,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$apr_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 4,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$may_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 5,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$jun_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 6,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$jul_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 7,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$aug_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 8,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$sep_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 9,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$oct_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 10,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$nov_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 11,treatment_control_endline_keep_prop$prop1,NA))
+treatment_control_endline_keep_prop$dec_prop <- lapply(month(treatment_control_endline_keep_prop$date_previous_reading), function(x) ifelse(x == 12,treatment_control_endline_keep_prop$prop1,NA))
+
+treatment_control_endline_keep_prop$jan_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 1, treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$feb_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 2,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$mar_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 3,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$apr_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 4,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$may_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 5,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$jun_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 6,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$jul_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 7,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$aug_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 8,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$sep_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 9,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$oct_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 10,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$nov_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 11,treatment_control_endline_keep_prop$prop2,NA))
+treatment_control_endline_keep_prop$dec_prop1 <- lapply(month(treatment_control_endline_keep_prop$date_current_reading), function(x) ifelse(x == 12,treatment_control_endline_keep_prop$prop2,NA))
+
+treatment_control_endline_keep_prop$jan_prop[is.na(treatment_control_endline_keep_prop$jan_prop )] <- treatment_control_endline_keep_prop$jan_prop1[is.na(treatment_control_endline_keep_prop$jan_prop)]
+treatment_control_endline_keep_prop$feb_prop[is.na(treatment_control_endline_keep_prop$feb_prop )] <- treatment_control_endline_keep_prop$feb_prop1[is.na(treatment_control_endline_keep_prop$feb_prop)]
+treatment_control_endline_keep_prop$mar_prop[is.na(treatment_control_endline_keep_prop$mar_prop )] <- treatment_control_endline_keep_prop$mar_prop1[is.na(treatment_control_endline_keep_prop$mar_prop)]
+treatment_control_endline_keep_prop$apr_prop[is.na(treatment_control_endline_keep_prop$apr_prop )] <- treatment_control_endline_keep_prop$apr_prop1[is.na(treatment_control_endline_keep_prop$apr_prop)]
+treatment_control_endline_keep_prop$may_prop[is.na(treatment_control_endline_keep_prop$may_prop )] <- treatment_control_endline_keep_prop$may_prop1[is.na(treatment_control_endline_keep_prop$may_prop)]
+treatment_control_endline_keep_prop$jun_prop[is.na(treatment_control_endline_keep_prop$jun_prop )] <- treatment_control_endline_keep_prop$jun_prop1[is.na(treatment_control_endline_keep_prop$jun_prop)]
+treatment_control_endline_keep_prop$jul_prop[is.na(treatment_control_endline_keep_prop$jul_prop )] <- treatment_control_endline_keep_prop$jul_prop1[is.na(treatment_control_endline_keep_prop$jul_prop)]
+treatment_control_endline_keep_prop$aug_prop[is.na(treatment_control_endline_keep_prop$aug_prop )] <- treatment_control_endline_keep_prop$aug_prop1[is.na(treatment_control_endline_keep_prop$aug_prop)]
+treatment_control_endline_keep_prop$sep_prop[is.na(treatment_control_endline_keep_prop$sep_prop )] <- treatment_control_endline_keep_prop$sep_prop1[is.na(treatment_control_endline_keep_prop$sep_prop)]
+treatment_control_endline_keep_prop$oct_prop[is.na(treatment_control_endline_keep_prop$oct_prop )] <- treatment_control_endline_keep_prop$oct_prop1[is.na(treatment_control_endline_keep_prop$oct_prop)]
+treatment_control_endline_keep_prop$nov_prop[is.na(treatment_control_endline_keep_prop$nov_prop )] <- treatment_control_endline_keep_prop$nov_prop1[is.na(treatment_control_endline_keep_prop$nov_prop)]
+treatment_control_endline_keep_prop$dec_prop[is.na(treatment_control_endline_keep_prop$dec_prop )] <- treatment_control_endline_keep_prop$dec_prop1[is.na(treatment_control_endline_keep_prop$dec_prop)]
+
+
+treatment_control_endline_keep_prop_ex <- treatment_control_endline_keep_prop[,1:104]
+
+treatment_control_endline_keep_prop_ex$jan_prop  <- unlist(treatment_control_endline_keep_prop_ex$jan_prop)
+treatment_control_endline_keep_prop_ex$feb_prop  <- unlist(treatment_control_endline_keep_prop_ex$feb_prop)
+treatment_control_endline_keep_prop_ex$mar_prop  <- unlist(treatment_control_endline_keep_prop_ex$mar_prop)
+treatment_control_endline_keep_prop_ex$apr_prop  <- unlist(treatment_control_endline_keep_prop_ex$apr_prop)
+treatment_control_endline_keep_prop_ex$may_prop  <- unlist(treatment_control_endline_keep_prop_ex$may_prop)
+treatment_control_endline_keep_prop_ex$jun_prop  <- unlist(treatment_control_endline_keep_prop_ex$jun_prop)
+treatment_control_endline_keep_prop_ex$jul_prop  <- unlist(treatment_control_endline_keep_prop_ex$jul_prop)
+treatment_control_endline_keep_prop_ex$aug_prop  <- unlist(treatment_control_endline_keep_prop_ex$aug_prop)
+treatment_control_endline_keep_prop_ex$sep_prop  <- unlist(treatment_control_endline_keep_prop_ex$sep_prop)
+treatment_control_endline_keep_prop_ex$oct_prop  <- unlist(treatment_control_endline_keep_prop_ex$oct_prop)
+treatment_control_endline_keep_prop_ex$nov_prop  <- unlist(treatment_control_endline_keep_prop_ex$nov_prop)
+treatment_control_endline_keep_prop_ex$dec_prop  <- unlist(treatment_control_endline_keep_prop_ex$dec_prop)
 ###########################################
 # END SECTION 5
 ###########################################
